@@ -1,10 +1,13 @@
 from decimal import Decimal
 
 import pytest
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from .models import Consumer, MeterReading
 from .services import create_consumer
+
+User = get_user_model()
 
 
 @pytest.mark.django_db
@@ -67,7 +70,7 @@ class TestConsumerBilling:
         assert consumer.full_name == "Сергей Кузнецов"
         assert consumer.is_active is True
 
-    def test_consumer_detail_view(self, client):
+    def test_consumer_detail_view_requires_employee_login(self, client):
         consumer = Consumer.objects.create(
             account_number="A-2002",
             full_name="Елена Васильева",
@@ -78,6 +81,39 @@ class TestConsumerBilling:
 
         response = client.get(reverse("consumer_detail", kwargs={"pk": consumer.pk}))
 
+        assert response.status_code == 302
+        assert "/accounts/login/" in response["Location"]
+
+    def test_employee_can_open_consumer_detail(self, client):
+        employee = User.objects.create_user(
+            username="employee_detail",
+            password="StrongPass123!",
+            role=User.Role.EMPLOYEE,
+        )
+        consumer = Consumer.objects.create(
+            account_number="A-2003",
+            full_name="Елена Васильева",
+            address="ул. Речная, 18",
+            contract_number="K-2003",
+            tariff_rate=Decimal("6.30"),
+        )
+
+        client.force_login(employee)
+        response = client.get(reverse("consumer_detail", kwargs={"pk": consumer.pk}))
+
         assert response.status_code == 200
         assert response.context["consumer"] == consumer
         assert "Елена Васильева" in response.content.decode()
+
+    def test_consumer_role_cannot_open_employee_page(self, client):
+        consumer_user = User.objects.create_user(
+            username="consumer_detail",
+            password="StrongPass123!",
+            role=User.Role.CONSUMER,
+        )
+
+        client.force_login(consumer_user)
+        response = client.get(reverse("consumer_list"))
+
+        assert response.status_code == 302
+        assert response["Location"] == "/accounts/login/?next=/consumers/"

@@ -2,8 +2,6 @@ from decimal import Decimal
 
 from django import forms
 
-from consumers.models import Consumer
-
 from .models import Invoice, Payment
 
 

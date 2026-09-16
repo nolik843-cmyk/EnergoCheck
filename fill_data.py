@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import os
-from decimal import Decimal
 from datetime import date
+from decimal import Decimal
 
 import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
 django.setup()
 
-from billing.services import create_invoice_for_consumer, register_payment
-from consumers.models import Consumer, MeterReading
-from notifications.services import create_notification
+from billing.services import create_invoice_for_consumer, register_payment  # noqa: E402
+from consumers.models import Consumer, MeterReading  # noqa: E402
+from notifications.services import create_notification  # noqa: E402
 
 
 def populate_demo_data() -> None:
@@ -71,7 +71,7 @@ def populate_demo_data() -> None:
         current_reading=Decimal("228.500"),
         due_date=date(2026, 9, 25),
     )
-    invoice_3 = create_invoice_for_consumer(
+    create_invoice_for_consumer(
         consumer=created_consumers[2],
         billing_period="2026-09",
         previous_reading=Decimal("180.000"),

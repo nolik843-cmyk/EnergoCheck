@@ -43,9 +43,7 @@ class Invoice(models.Model):
         if self.consumption_kwh == Decimal("0.00"):
             self.consumption_kwh = self.current_reading - self.previous_reading
         if self.total_amount == Decimal("0.00"):
-            self.total_amount = (self.consumption_kwh * self.tariff_rate).quantize(
-                Decimal("0.01")
-            )
+            self.total_amount = (self.consumption_kwh * self.tariff_rate).quantize(Decimal("0.01"))
         super().save(*args, **kwargs)
 
     def __str__(self) -> str:
@@ -64,7 +62,11 @@ class Payment(models.Model):
         related_name="payments",
     )
     amount = models.DecimalField(max_digits=12, decimal_places=2)
-    payment_method = models.CharField(max_length=20, choices=Method.choices, default=Method.TRANSFER)
+    payment_method = models.CharField(
+        max_length=20,
+        choices=Method.choices,
+        default=Method.TRANSFER,
+    )
     reference = models.CharField(max_length=80, unique=True)
     paid_at = models.DateTimeField(auto_now_add=True)
 

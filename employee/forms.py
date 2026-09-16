@@ -33,7 +33,9 @@ class ConsumerCreateForm(forms.ModelForm):
 
 
 class MeterReadingForm(forms.Form):
-    reading_date = forms.DateField(widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}))
+    reading_date = forms.DateField(
+        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"})
+    )
     value = forms.DecimalField(
         min_value=Decimal("0.00"),
         max_digits=12,

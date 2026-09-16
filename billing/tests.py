@@ -1,12 +1,15 @@
 from decimal import Decimal
 
 import pytest
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 
 from consumers.models import Consumer
 
 from .models import Invoice, Payment
 from .services import create_invoice_for_consumer, register_payment
+
+User = get_user_model()
 
 
 @pytest.mark.django_db
@@ -55,6 +58,12 @@ class TestBilling:
         assert invoice.status == Invoice.Status.PAID
 
     def test_invoice_create_view_renders_form_and_creates_invoice(self, client):
+        employee = User.objects.create_user(
+            username="employee_invoice",
+            password="StrongPass123!",
+            role=User.Role.EMPLOYEE,
+        )
+        client.force_login(employee)
         consumer = Consumer.objects.create(
             account_number="A-2003",
             full_name="Ольга Ларина",
@@ -79,6 +88,12 @@ class TestBilling:
         assert invoice.total_amount == Decimal("315.90")
 
     def test_payment_create_view_marks_invoice_paid(self, client):
+        employee = User.objects.create_user(
+            username="employee_payment",
+            password="StrongPass123!",
+            role=User.Role.EMPLOYEE,
+        )
+        client.force_login(employee)
         consumer = Consumer.objects.create(
             account_number="A-2004",
             full_name="Павел Киселёв",

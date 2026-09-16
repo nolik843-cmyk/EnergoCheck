@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
@@ -11,13 +12,12 @@ from consumers.models import Consumer
 from notifications.models import Notification
 
 
+@login_required
 def home(request: HttpRequest) -> HttpResponse:
     consumers_count = Consumer.objects.count()
     invoices_count = Invoice.objects.count()
     paid_count = Invoice.objects.filter(status=Invoice.Status.PAID).count()
-    total_revenue = (
-        Payment.objects.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
-    )
+    total_revenue = Payment.objects.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
     latest_notifications = Notification.objects.select_related("user")[:5]
 
     context = {
@@ -31,6 +31,7 @@ def home(request: HttpRequest) -> HttpResponse:
     return render(request, "home.html", context)
 
 
+@login_required
 def employee_dashboard(request: HttpRequest) -> HttpResponse:
     consumers = Consumer.objects.filter(is_active=True).order_by("full_name")
     unpaid_invoices = Invoice.objects.filter(

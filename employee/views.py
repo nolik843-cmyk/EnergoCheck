@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from decimal import Decimal
-
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
@@ -10,6 +9,12 @@ from consumers.services import create_consumer, create_meter_reading
 from employee.forms import ConsumerCreateForm, MeterReadingForm
 
 
+def is_employee(user) -> bool:
+    return user.is_authenticated and user.is_employee
+
+
+@login_required
+@user_passes_test(is_employee)
 def consumer_create_view(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         form = ConsumerCreateForm(request.POST)
@@ -25,9 +30,15 @@ def consumer_create_view(request: HttpRequest) -> HttpResponse:
     else:
         form = ConsumerCreateForm()
 
-    return render(request, "employee/consumer_create.html", {"form": form, "title": "Новый потребитель"})
+    return render(
+        request,
+        "employee/consumer_create.html",
+        {"form": form, "title": "Новый потребитель"},
+    )
 
 
+@login_required
+@user_passes_test(is_employee)
 def meter_reading_create_view(request: HttpRequest, consumer_id: int) -> HttpResponse:
     consumer = Consumer.objects.get(pk=consumer_id)
 

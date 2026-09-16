@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
@@ -8,11 +9,19 @@ from .models import Invoice
 from .services import create_invoice_for_consumer, register_payment
 
 
+def is_employee(user) -> bool:
+    return user.is_authenticated and user.is_employee
+
+
+@login_required
+@user_passes_test(is_employee)
 def billing_dashboard(request: HttpRequest) -> HttpResponse:
     invoices = Invoice.objects.select_related("consumer").all()
     return render(request, "billing/dashboard.html", {"invoices": invoices, "title": "Биллинг"})
 
 
+@login_required
+@user_passes_test(is_employee)
 def invoice_create_view(request: HttpRequest) -> HttpResponse:
     if request.method == "POST":
         form = InvoiceCreateForm(request.POST)
@@ -32,6 +41,8 @@ def invoice_create_view(request: HttpRequest) -> HttpResponse:
     return render(request, "billing/invoice_create.html", {"form": form, "title": "Создать счёт"})
 
 
+@login_required
+@user_passes_test(is_employee)
 def payment_create_view(request: HttpRequest, invoice_id: int) -> HttpResponse:
     invoice = Invoice.objects.get(pk=invoice_id)
 
