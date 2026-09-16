@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Аномалии потребления</h1>
+      <p class="text-muted mb-0">ML-оценка нетипичного потребления, требующая проверки сотрудника</p>
+    </div>
+    <a href="{% url 'employee_dashboard' %}" class="btn btn-outline-secondary">Назад</a>
+  </div>
+  {% for anomaly in anomalies %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between">
+          <h2 class="h5">{{ anomaly.consumer.full_name }}</h2>
+          <span class="badge text-bg-warning">{{ anomaly.get_status_display }}</span>
+        </div>
+        <p class="mb-1">Период: {{ anomaly.period }} · Оценка: {{ anomaly.anomaly_score }}</p>
+        <p class="text-muted mb-0">{{ anomaly.description }}</p>
+      </div>
+    </div>
+  {% empty %}
+    <div class="alert alert-info">Аномалий пока не обнаружено.</div>
+  {% endfor %}
+</div>
+{% endblock %}

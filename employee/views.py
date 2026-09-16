@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
-from consumers.models import Consumer, Meter, MeterReading
+from consumers.models import Consumer, ConsumptionAnomaly, Meter, MeterReading
 from consumers.services import (
     create_consumer,
     create_contract,
@@ -130,6 +130,17 @@ def photo_reading_create_view(request: HttpRequest, consumer_id: int) -> HttpRes
         request,
         "employee/photo_reading_create.html",
         {"form": form, "consumer": consumer, "result": result, "title": "Распознавание показания"},
+    )
+
+
+@login_required
+@user_passes_test(is_employee)
+def anomaly_list_view(request: HttpRequest) -> HttpResponse:
+    anomalies = ConsumptionAnomaly.objects.select_related("consumer", "meter", "reading")
+    return render(
+        request,
+        "employee/anomaly_list.html",
+        {"anomalies": anomalies, "title": "Аномалии потребления"},
     )
 
 

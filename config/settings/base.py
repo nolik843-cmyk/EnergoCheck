@@ -87,6 +87,7 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+ML_MODELS_DIR = Path(os.getenv("ML_MODELS_DIR", BASE_DIR / "media" / "models"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 

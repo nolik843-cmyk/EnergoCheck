@@ -1,6 +1,7 @@
 from decimal import Decimal
 from io import BytesIO
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -10,7 +11,9 @@ from django.urls import reverse
 from PIL import Image
 
 from integrations.meter_ocr.fake import FakeMeterReadingRecognizer
+from integrations.ml.anomaly_detector import ConsumptionAnomalyDetector
 
+from .anomaly_services import detect_reading_anomaly
 from .models import Consumer, Contract, Meter, MeterReading, SupplyObject
 from .services import (
     create_consumer,
@@ -310,3 +313,48 @@ class TestConsumerBilling:
         assert first.pk == second.pk
         assert MeterReading.objects.filter(photo_checksum=first.photo_checksum).count() == 1
         assert first.source == MeterReading.Source.CAMERA
+
+    def test_anomaly_detector_requires_minimum_history(self):
+        detector = ConsumptionAnomalyDetector()
+
+        with pytest.raises(ValueError, match="Недостаточно данных"):
+            detector.fit([[1.0, 0.0, 0.0, 1.0, 1.0, 30.0]])
+
+    def test_anomaly_detector_trains_and_predicts(self):
+        detector = ConsumptionAnomalyDetector()
+        features = [[float(value), 1.0, 0.1, float(value), 1.0, 30.0] for value in range(5, 12)]
+
+        metadata = detector.fit(features)
+        prediction = detector.predict(features[-1])
+
+        assert metadata["algorithm"] == "IsolationForest"
+        assert prediction.is_anomaly is not None
+        assert prediction.model_version == "isolation-forest-v1"
+
+        with TemporaryDirectory() as directory:
+            model_path = Path(directory) / "model.joblib"
+            detector.save(model_path)
+            assert model_path.exists()
+
+    def test_anomaly_detection_stores_result(self):
+        consumer = Consumer.objects.create(
+            account_number="A-3007",
+            full_name="Светлана Котова",
+            address="ул. Тихая, 7",
+            contract_number="K-3007",
+            tariff_rate=Decimal("5.00"),
+        )
+        for index, value in enumerate(range(100, 108), start=1):
+            MeterReading.objects.create(
+                consumer=consumer,
+                reading_date=f"2026-0{index}-01",
+                value=Decimal(value),
+            )
+        reading = consumer.meter_readings.order_by("-reading_date").first()
+        detector = ConsumptionAnomalyDetector()
+        detector.fit([[float(value), 1.0, 0.1, float(value), 1.0, 30.0] for value in range(5, 12)])
+
+        anomaly = detect_reading_anomaly(reading=reading, detector=detector)
+
+        assert anomaly is not None
+        assert anomaly.consumer == consumer

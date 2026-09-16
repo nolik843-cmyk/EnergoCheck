@@ -1,6 +1,7 @@
 from django.urls import path
 
 from .views import (
+    anomaly_list_view,
     consumer_create_view,
     contract_create_view,
     meter_create_view,
@@ -17,6 +18,7 @@ urlpatterns = [
     path("contracts/create/", contract_create_view, name="contract_create"),
     path("meters/create/", meter_create_view, name="meter_create"),
     path("readings/review/", meter_reading_review_view, name="meter_reading_review"),
+    path("anomalies/", anomaly_list_view, name="anomaly_list"),
     path(
         "consumers/<int:consumer_id>/reading/photo/",
         photo_reading_create_view,

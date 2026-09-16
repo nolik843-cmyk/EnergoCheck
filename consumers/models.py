@@ -180,3 +180,47 @@ class MeterReading(models.Model):
 
     def __str__(self) -> str:
         return f"{self.consumer.full_name} - {self.value} ({self.reading_date})"
+
+
+class ConsumptionAnomaly(models.Model):
+    class Status(models.TextChoices):
+        NEW = "NEW", "Новое"
+        REVIEWING = "REVIEWING", "На проверке"
+        CONFIRMED = "CONFIRMED", "Подтверждено"
+        REJECTED = "REJECTED", "Отклонено"
+
+    consumer = models.ForeignKey(
+        Consumer,
+        on_delete=models.CASCADE,
+        related_name="consumption_anomalies",
+    )
+    meter = models.ForeignKey(
+        Meter,
+        on_delete=models.SET_NULL,
+        related_name="consumption_anomalies",
+        blank=True,
+        null=True,
+    )
+    reading = models.ForeignKey(
+        MeterReading,
+        on_delete=models.SET_NULL,
+        related_name="anomalies",
+        blank=True,
+        null=True,
+    )
+    period = models.DateField()
+    anomaly_score = models.DecimalField(max_digits=8, decimal_places=5)
+    anomaly_type = models.CharField(max_length=80, default="CONSUMPTION")
+    description = models.TextField()
+    model_version = models.CharField(max_length=40)
+    status = models.CharField(max_length=20, choices=Status.choices, default=Status.NEW)
+    detected_at = models.DateTimeField(auto_now_add=True)
+    review_comment = models.TextField(blank=True)
+
+    class Meta:
+        ordering = ["-detected_at"]
+        verbose_name = "Аномалия потребления"
+        verbose_name_plural = "Аномалии потребления"
+
+    def __str__(self) -> str:
+        return f"{self.consumer.full_name} / {self.period} / {self.anomaly_score}"
