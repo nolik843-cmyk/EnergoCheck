@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Кабинет потребителя</h1>
+      <p class="text-muted mb-0">{{ consumer.full_name }} · Лицевой счет {{ consumer.account_number }}</p>
+    </div>
+    <form method="post" action="{% url 'logout' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-secondary">Выйти</button>
+    </form>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h5">Мои счета</h2>
+          {% for invoice in invoices %}
+            <div class="border-bottom py-2">
+              <strong>{{ invoice.billing_period }}</strong>
+              <span class="float-end">{{ invoice.total_amount }} ₽</span>
+              <div class="small text-muted">{{ invoice.get_status_display }}</div>
+            </div>
+          {% empty %}
+            <p class="text-muted mb-0">Счетов пока нет.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <h2 class="h5">Последние показания</h2>
+          {% for reading in readings %}
+            <div class="border-bottom py-2">
+              {{ reading.reading_date }}
+              <span class="float-end">{{ reading.value }} кВт·ч</span>
+            </div>
+          {% empty %}
+            <p class="text-muted mb-0">Показаний пока нет.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-12">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h2 class="h5">Уведомления</h2>
+          {% for notification in notifications %}
+            <div class="alert alert-light border mb-2">
+              <strong>{{ notification.title }}</strong>
+              <div>{{ notification.message }}</div>
+            </div>
+          {% empty %}
+            <p class="text-muted mb-0">Уведомлений пока нет.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

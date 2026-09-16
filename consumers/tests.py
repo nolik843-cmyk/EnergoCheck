@@ -165,6 +165,35 @@ class TestConsumerBilling:
         assert response.status_code == 302
         assert response["Location"] == "/accounts/login/?next=/consumers/"
 
+    def test_consumer_dashboard_shows_only_linked_consumer(self, client):
+        consumer_user = User.objects.create_user(
+            username="linked_consumer",
+            password="StrongPass123!",
+            role=User.Role.CONSUMER,
+        )
+        consumer = Consumer.objects.create(
+            user=consumer_user,
+            account_number="A-2004",
+            full_name="Связанный потребитель",
+            address="ул. Личная, 1",
+            contract_number="K-2004",
+            tariff_rate=Decimal("5.00"),
+        )
+        Consumer.objects.create(
+            account_number="A-2005",
+            full_name="Другой потребитель",
+            address="ул. Чужая, 2",
+            contract_number="K-2005",
+            tariff_rate=Decimal("5.00"),
+        )
+
+        client.force_login(consumer_user)
+        response = client.get(reverse("consumer_dashboard"))
+
+        assert response.status_code == 200
+        assert consumer.full_name in response.content.decode()
+        assert "Другой потребитель" not in response.content.decode()
+
     def test_manual_reading_lower_than_previous_waits_for_review(self):
         consumer = Consumer.objects.create(
             account_number="A-3002",
