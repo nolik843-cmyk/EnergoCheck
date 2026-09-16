@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
+from django.db.models import Sum
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import render
 
@@ -15,7 +16,7 @@ def home(request: HttpRequest) -> HttpResponse:
     invoices_count = Invoice.objects.count()
     paid_count = Invoice.objects.filter(status=Invoice.Status.PAID).count()
     total_revenue = (
-        Payment.objects.aggregate(total=models.Sum("amount"))["total"] or Decimal("0.00")
+        Payment.objects.aggregate(total=Sum("amount"))["total"] or Decimal("0.00")
     )
     latest_notifications = Notification.objects.select_related("user")[:5]
 
@@ -28,3 +29,20 @@ def home(request: HttpRequest) -> HttpResponse:
         "latest_notifications": latest_notifications,
     }
     return render(request, "home.html", context)
+
+
+def employee_dashboard(request: HttpRequest) -> HttpResponse:
+    consumers = Consumer.objects.filter(is_active=True).order_by("full_name")
+    unpaid_invoices = Invoice.objects.filter(
+        status__in=[Invoice.Status.ISSUED, Invoice.Status.OVERDUE, Invoice.Status.DRAFT]
+    ).select_related("consumer")[:10]
+
+    return render(
+        request,
+        "employee_dashboard.html",
+        {
+            "title": "Панель сотрудника",
+            "consumers": consumers,
+            "unpaid_invoices": unpaid_invoices,
+        },
+    )

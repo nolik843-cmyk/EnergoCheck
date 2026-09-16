@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "billing.apps.BillingConfig",
     "notifications.apps.NotificationsConfig",
     "analytics.apps.AnalyticsConfig",
+    "employee.apps.EmployeeConfig",
 ]
 
 AUTH_USER_MODEL = "accounts.User"
