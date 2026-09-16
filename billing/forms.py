@@ -2,7 +2,7 @@ from decimal import Decimal
 
 from django import forms
 
-from .models import Invoice, Payment
+from .models import Invoice, Payment, Tariff
 
 
 class InvoiceCreateForm(forms.ModelForm):
@@ -47,3 +47,24 @@ class PaymentCreateForm(forms.ModelForm):
         if amount <= Decimal("0.00"):
             raise forms.ValidationError("Сумма оплаты должна быть больше нуля.")
         return amount
+
+
+class TariffForm(forms.ModelForm):
+    class Meta:
+        model = Tariff
+        fields = ["name", "price_per_kwh", "valid_from", "valid_to", "is_active"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class": "form-control"}),
+            "price_per_kwh": forms.NumberInput(attrs={"class": "form-control", "step": "0.0001"}),
+            "valid_from": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "valid_to": forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        valid_from = cleaned_data.get("valid_from")
+        valid_to = cleaned_data.get("valid_to")
+        if valid_from and valid_to and valid_to < valid_from:
+            raise forms.ValidationError("Дата окончания тарифа не может быть раньше даты начала.")
+        return cleaned_data

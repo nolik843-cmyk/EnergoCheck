@@ -4,7 +4,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
-from .forms import InvoiceCreateForm, PaymentCreateForm
+from .forms import InvoiceCreateForm, PaymentCreateForm, TariffForm
 from .models import Invoice
 from .services import create_invoice_for_consumer, register_payment
 
@@ -64,3 +64,13 @@ def payment_create_view(request: HttpRequest, invoice_id: int) -> HttpResponse:
         "billing/payment_create.html",
         {"form": form, "invoice": invoice, "title": "Оплата счёта"},
     )
+
+
+@login_required
+@user_passes_test(is_employee)
+def tariff_create_view(request: HttpRequest) -> HttpResponse:
+    form = TariffForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return redirect("billing_dashboard")
+    return render(request, "billing/tariff_create.html", {"form": form, "title": "Новый тариф"})

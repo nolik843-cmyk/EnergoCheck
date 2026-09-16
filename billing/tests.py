@@ -1,13 +1,14 @@
+from datetime import date
 from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from consumers.models import Consumer
+from consumers.models import Consumer, Contract, Meter, MeterReading, SupplyObject
 
-from .models import Invoice, Payment
-from .services import create_invoice_for_consumer, register_payment
+from .models import Invoice, Payment, Tariff
+from .services import create_invoice_for_consumer, generate_invoice, register_payment
 
 User = get_user_model()
 
@@ -122,3 +123,81 @@ class TestBilling:
         invoice.refresh_from_db()
         assert response.status_code == 302
         assert invoice.status == Invoice.Status.PAID
+
+    def test_generate_invoice_uses_tariff_snapshot_and_is_idempotent(self):
+        consumer = Consumer.objects.create(
+            account_number="A-2010",
+            full_name="Александр Волков",
+            address="ул. Полевая, 10",
+            contract_number="K-2010",
+            tariff_rate=Decimal("4.00"),
+        )
+        supply_object = SupplyObject.objects.create(consumer=consumer, address=consumer.address)
+        contract = Contract.objects.create(
+            consumer=consumer,
+            supply_object=supply_object,
+            number="DOG-2010",
+            start_date=date(2026, 1, 1),
+        )
+        meter = Meter.objects.create(
+            supply_object=supply_object,
+            serial_number="M-2010",
+            install_date=date(2026, 1, 1),
+        )
+        MeterReading.objects.create(
+            consumer=consumer,
+            meter=meter,
+            reading_date=date(2026, 9, 1),
+            value=Decimal("100.000"),
+        )
+        MeterReading.objects.create(
+            consumer=consumer,
+            meter=meter,
+            reading_date=date(2026, 9, 30),
+            value=Decimal("150.000"),
+        )
+        tariff = Tariff.objects.create(
+            name="Базовый 2026",
+            price_per_kwh=Decimal("7.25"),
+            valid_from=date(2026, 1, 1),
+        )
+
+        invoice = generate_invoice(
+            contract=contract,
+            period_start=date(2026, 9, 1),
+            period_end=date(2026, 9, 30),
+            due_date=date(2026, 10, 15),
+            tariff=tariff,
+        )
+        duplicate = generate_invoice(
+            contract=contract,
+            period_start=date(2026, 9, 1),
+            period_end=date(2026, 9, 30),
+            due_date=date(2026, 10, 15),
+            tariff=tariff,
+        )
+
+        assert invoice.pk == duplicate.pk
+        assert invoice.tariff_name_snapshot == "Базовый 2026"
+        assert invoice.total_amount == Decimal("362.50")
+
+    def test_partial_payment_changes_invoice_status(self):
+        consumer = Consumer.objects.create(
+            account_number="A-2011",
+            full_name="Вера Лукина",
+            address="ул. Полевая, 11",
+            contract_number="K-2011",
+            tariff_rate=Decimal("5.00"),
+        )
+        invoice = create_invoice_for_consumer(
+            consumer=consumer,
+            billing_period="2026-11",
+            previous_reading=Decimal("10.000"),
+            current_reading=Decimal("20.000"),
+            due_date="2026-11-25",
+        )
+
+        register_payment(invoice, Decimal("10.00"), Payment.Method.TRANSFER, "REF-2011")
+
+        invoice.refresh_from_db()
+        assert invoice.status == Invoice.Status.PARTIALLY_PAID

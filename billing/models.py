@@ -4,13 +4,30 @@ from decimal import Decimal
 
 from django.db import models
 
-from consumers.models import Consumer
+from consumers.models import Consumer, Contract
+
+
+class Tariff(models.Model):
+    name = models.CharField(max_length=120)
+    price_per_kwh = models.DecimalField(max_digits=10, decimal_places=4)
+    valid_from = models.DateField()
+    valid_to = models.DateField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["-valid_from", "name"]
+        verbose_name = "Тариф"
+        verbose_name_plural = "Тарифы"
+
+    def __str__(self) -> str:
+        return f"{self.name} ({self.price_per_kwh})"
 
 
 class Invoice(models.Model):
     class Status(models.TextChoices):
         DRAFT = "DRAFT", "Черновик"
         ISSUED = "ISSUED", "Выставлен"
+        PARTIALLY_PAID = "PARTIALLY_PAID", "Частично оплачен"
         PAID = "PAID", "Оплачен"
         OVERDUE = "OVERDUE", "Просрочен"
 
@@ -19,11 +36,25 @@ class Invoice(models.Model):
         on_delete=models.CASCADE,
         related_name="invoices",
     )
+    contract = models.ForeignKey(
+        Contract,
+        on_delete=models.PROTECT,
+        related_name="invoices",
+        blank=True,
+        null=True,
+    )
     billing_period = models.CharField(max_length=20)
     previous_reading = models.DecimalField(max_digits=12, decimal_places=3)
     current_reading = models.DecimalField(max_digits=12, decimal_places=3)
     consumption_kwh = models.DecimalField(max_digits=12, decimal_places=3, default=Decimal("0.00"))
     tariff_rate = models.DecimalField(max_digits=10, decimal_places=4, default=Decimal("0.00"))
+    tariff_name_snapshot = models.CharField(max_length=120, blank=True)
+    price_per_kwh_snapshot = models.DecimalField(
+        max_digits=10,
+        decimal_places=4,
+        blank=True,
+        null=True,
+    )
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     status = models.CharField(
         max_length=20,
@@ -38,6 +69,12 @@ class Invoice(models.Model):
         ordering = ["-billing_period", "-issued_at"]
         verbose_name = "Счёт"
         verbose_name_plural = "Счета"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["contract", "billing_period"],
+                name="unique_contract_billing_period",
+            )
+        ]
 
     def save(self, *args, **kwargs):
         if self.consumption_kwh == Decimal("0.00"):
