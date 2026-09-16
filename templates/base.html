@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}EnergoCheck{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" />
+  </head>
+  <body class="bg-light">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+      <div class="container">
+        <a class="navbar-brand" href="/">EnergoCheck</a>
+        <div class="navbar-nav ms-auto">
+          <a class="nav-link" href="/consumers/">Потребители</a>
+          <a class="nav-link" href="/billing/">Биллинг</a>
+          <a class="nav-link" href="/analytics/">Аналитика</a>
+        </div>
+      </div>
+    </nav>
+
+    {% block content %}{% endblock %}
+  </body>
+</html>

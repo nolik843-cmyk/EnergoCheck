@@ -1,28 +1,77 @@
-<!DOCTYPE html>
-<html lang="ru">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" />
-  </head>
-  <body class="bg-light">
-    <div class="container py-5">
-      <div class="row justify-content-center">
-        <div class="col-lg-8">
-          <div class="card shadow-sm border-0">
-            <div class="card-body p-5">
-              <h1 class="display-5 fw-bold mb-3">EnergoCheck</h1>
-              <p class="lead text-muted mb-4">
-                Веб-платформа для учета электроэнергии, договоров, счетов, оплат и аналитики.
-              </p>
-              <div class="alert alert-success mb-0">
-                Базовый каркас проекта успешно создан и готов к дальнейшему развитию.
-              </div>
-            </div>
-          </div>
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row g-4 mb-4">
+    <div class="col-md-3">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small">Потребители</div>
+          <div class="display-6 fw-bold mt-2">{{ consumers_count }}</div>
         </div>
       </div>
     </div>
-  </body>
-</html>
+    <div class="col-md-3">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small">Счета</div>
+          <div class="display-6 fw-bold mt-2">{{ invoices_count }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small">Оплачено</div>
+          <div class="display-6 fw-bold mt-2">{{ paid_count }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card h-100 border-0 shadow-sm">
+        <div class="card-body">
+          <div class="text-muted small">Выручка</div>
+          <div class="display-6 fw-bold mt-2">{{ total_revenue }} ₽</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <h2 class="h4 mb-3">Ключевые возможности</h2>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item">Учет абонентов и лицевых счетов</li>
+            <li class="list-group-item">Фиксация показаний приборов учета</li>
+            <li class="list-group-item">Генерация и оплата счетов</li>
+            <li class="list-group-item">Уведомления и аналитика по задолженности</li>
+            <li class="list-group-item">Рольовая модель для потребителей и сотрудников</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <h2 class="h4 mb-3">Уведомления</h2>
+          {% if latest_notifications %}
+            {% for item in latest_notifications %}
+              <div class="alert alert-light border mb-2 py-2">
+                <strong>{{ item.title }}</strong>
+                <div class="small text-muted">{{ item.created_at|date:"d.m.Y H:i" }}</div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div class="alert alert-info mb-0">Уведомлений пока нет.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">{{ consumer.full_name }}</h1>
+      <p class="text-muted mb-0">Лицевой счёт: {{ consumer.account_number }}</p>
+    </div>
+    <a href="/consumers/" class="btn btn-outline-secondary">К списку</a>
+  </div>
+
+  <div class="row g-4 mb-4">
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Данные абонента</h2>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item"><strong>Адрес:</strong> {{ consumer.address }}</li>
+            <li class="list-group-item"><strong>Договор:</strong> {{ consumer.contract_number }}</li>
+            <li class="list-group-item"><strong>Тариф:</strong> {{ consumer.tariff_rate }} ₽/кВт·ч</li>
+            <li class="list-group-item"><strong>Статус:</strong> {% if consumer.is_active %}Активен{% else %}Неактивен{% endif %}</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <h2 class="h5 mb-3">Последние показания</h2>
+          {% if readings %}
+            <table class="table table-sm mb-0">
+              <thead>
+                <tr>
+                  <th>Дата</th>
+                  <th>Показание</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for reading in readings %}
+                  <tr>
+                    <td>{{ reading.reading_date }}</td>
+                    <td>{{ reading.value }} кВт·ч</td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <div class="alert alert-info mb-0">Показаний пока нет.</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

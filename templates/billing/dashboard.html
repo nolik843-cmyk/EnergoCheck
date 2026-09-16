@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Биллинг</h1>
+      <p class="text-muted mb-0">Счета, платежи и статусы оплаты</p>
+    </div>
+    <a href="/" class="btn btn-outline-secondary">На главную</a>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped align-middle shadow-sm">
+      <thead class="table-dark">
+        <tr>
+          <th>Потребитель</th>
+          <th>Период</th>
+          <th>Потребление</th>
+          <th>Сумма</th>
+          <th>Статус</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for invoice in invoices %}
+          <tr>
+            <td>{{ invoice.consumer.full_name }}</td>
+            <td>{{ invoice.billing_period }}</td>
+            <td>{{ invoice.consumption_kwh }} кВт·ч</td>
+            <td>{{ invoice.total_amount }} ₽</td>
+            <td>
+              {% if invoice.status == 'PAID' %}
+                <span class="badge text-bg-success">Оплачен</span>
+              {% elif invoice.status == 'OVERDUE' %}
+                <span class="badge text-bg-danger">Просрочен</span>
+              {% else %}
+                <span class="badge text-bg-warning text-dark">Выставлен</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

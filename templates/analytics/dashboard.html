@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Аналитика</h1>
+      <p class="text-muted mb-0">Сводка по потребителям, счетам и оплатам</p>
+    </div>
+    <a href="/" class="btn btn-outline-secondary">На главную</a>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="text-muted small">Активных потребителей</div>
+          <div class="display-6 fw-bold mt-2">{{ summary.consumers }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="text-muted small">Выставлено</div>
+          <div class="display-6 fw-bold mt-2">{{ summary.total_billed }} ₽</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="text-muted small">Оплачено</div>
+          <div class="display-6 fw-bold mt-2">{{ summary.total_paid }} ₽</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card shadow-sm border-0 h-100">
+        <div class="card-body">
+          <div class="text-muted small">Просрочено</div>
+          <div class="display-6 fw-bold mt-2">{{ summary.overdue }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

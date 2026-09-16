@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h3 mb-1">Потребители</h1>
+      <p class="text-muted mb-0">Список активных абонентов и их параметры</p>
+    </div>
+    <a href="/" class="btn btn-outline-secondary">На главную</a>
+  </div>
+
+  {% if consumers %}
+    <div class="table-responsive">
+      <table class="table table-striped align-middle shadow-sm rounded overflow-hidden">
+        <thead class="table-dark">
+          <tr>
+            <th>Лицевой счет</th>
+            <th>ФИО</th>
+            <th>Адрес</th>
+            <th>Тариф</th>
+            <th>Договор</th>
+            <th>Действие</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for consumer in consumers %}
+            <tr>
+              <td>{{ consumer.account_number }}</td>
+              <td>{{ consumer.full_name }}</td>
+              <td>{{ consumer.address }}</td>
+              <td>{{ consumer.tariff_rate }} ₽/кВт·ч</td>
+              <td>{{ consumer.contract_number }}</td>
+              <td><a href="{% url 'consumer_detail' consumer.pk %}" class="btn btn-sm btn-primary">Подробнее</a></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="alert alert-info">Потребители пока не добавлены.</div>
+  {% endif %}
+</div>
+{% endblock %}

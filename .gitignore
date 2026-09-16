@@ -7,14 +7,14 @@ __pycache__/
 venv/
 .env
 .env.*
+.pytest_cache/
+.ruff_cache/
 
 # Django
 *.log
 *.sqlite3
 media/
 staticfiles/
-
-a/.pytest_cache/
 .coverage
 htmlcov/
 
