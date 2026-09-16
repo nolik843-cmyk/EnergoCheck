@@ -1,5 +1,6 @@
 from decimal import Decimal
 from io import BytesIO
+from pathlib import Path
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -13,6 +14,7 @@ from integrations.meter_ocr.fake import FakeMeterReadingRecognizer
 from .models import Consumer, Contract, Meter, MeterReading, SupplyObject
 from .services import (
     create_consumer,
+    import_camera_photo,
     recognize_photo_reading,
     review_meter_reading,
     submit_manual_reading,
@@ -271,3 +273,40 @@ class TestConsumerBilling:
         assert reading.source == MeterReading.Source.PHOTO
         assert reading.recognized_value == Decimal("123.450")
         assert reading.status == MeterReading.Status.CONFIRMED
+
+    def test_camera_photo_import_is_idempotent(self, tmp_path):
+        consumer = Consumer.objects.create(
+            account_number="A-3006",
+            full_name="Евгений Морозов",
+            address="ул. Тихая, 6",
+            contract_number="K-3006",
+            tariff_rate=Decimal("5.00"),
+        )
+        supply_object = SupplyObject.objects.create(consumer=consumer, address=consumer.address)
+        meter = Meter.objects.create(
+            supply_object=supply_object,
+            serial_number="M-3006",
+            install_date="2026-01-01",
+        )
+        image_path = Path(tmp_path) / "M-3006_2026-09-16.jpg"
+        Image.new("RGB", (20, 20), color="white").save(image_path, format="JPEG")
+        recognizer = FakeMeterReadingRecognizer(Decimal("222.000"))
+
+        first = import_camera_photo(
+            meter=meter,
+            reading_date="2026-09-16",
+            image_path=image_path,
+            recognizer=recognizer,
+        )
+        second = import_camera_photo(
+            meter=meter,
+            reading_date="2026-09-16",
+            image_path=image_path,
+            recognizer=recognizer,
+        )
+
+        assert first is not None
+        assert second is not None
+        assert first.pk == second.pk
+        assert MeterReading.objects.filter(photo_checksum=first.photo_checksum).count() == 1
+        assert first.source == MeterReading.Source.CAMERA

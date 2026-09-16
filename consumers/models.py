@@ -165,6 +165,8 @@ class MeterReading(models.Model):
     source = models.CharField(max_length=20, choices=Source.choices, default=Source.MANUAL)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.CONFIRMED)
     photo = models.ImageField(upload_to="meter-readings/%Y/%m/", blank=True, null=True)
+    photo_checksum = models.CharField(max_length=64, blank=True, null=True, unique=True)
+    photo_filename = models.CharField(max_length=255, blank=True)
     recognized_value = models.DecimalField(max_digits=12, decimal_places=3, blank=True, null=True)
     recognition_confidence = models.DecimalField(
         max_digits=5,

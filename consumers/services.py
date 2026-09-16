@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import tempfile
 from datetime import date
 from decimal import Decimal
 from pathlib import Path
 
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db.models import QuerySet
 from django.utils import timezone
 from PIL import Image, UnidentifiedImageError
@@ -155,6 +158,59 @@ def recognize_photo_reading(
         source=MeterReading.Source.PHOTO,
         status=status,
         photo=photo,
+        recognized_value=result.value,
+        recognition_confidence=result.confidence,
+        review_comment=result.diagnostic,
+        confirmed_at=timezone.now() if status == MeterReading.Status.CONFIRMED else None,
+    )
+    return reading
+
+
+def import_camera_photo(
+    *,
+    meter: Meter,
+    reading_date: date,
+    image_path: Path,
+    recognizer: MeterReadingRecognizer,
+    confidence_threshold: Decimal = Decimal("0.75"),
+) -> MeterReading | None:
+    content = image_path.read_bytes()
+    checksum = hashlib.sha256(content).hexdigest()
+    existing = MeterReading.objects.filter(photo_checksum=checksum).first()
+    if existing is not None:
+        return existing
+
+    upload = SimpleUploadedFile(
+        image_path.name,
+        content,
+        content_type="image/jpeg",
+    )
+    with tempfile.NamedTemporaryFile(suffix=image_path.suffix, delete=True) as temporary_file:
+        temporary_file.write(content)
+        temporary_file.flush()
+        result = recognizer.recognize(Path(temporary_file.name))
+
+    try:
+        image = Image.open(upload)
+        image.verify()
+    except (UnidentifiedImageError, OSError) as exc:
+        raise ValidationError("Файл не является корректным изображением.") from exc
+
+    status = (
+        MeterReading.Status.CONFIRMED
+        if result.value is not None and result.confidence >= confidence_threshold
+        else MeterReading.Status.PENDING_REVIEW
+    )
+    reading = MeterReading.objects.create(
+        consumer=meter.supply_object.consumer,
+        meter=meter,
+        reading_date=reading_date,
+        value=result.value or Decimal("0.000"),
+        source=MeterReading.Source.CAMERA,
+        status=status,
+        photo=upload,
+        photo_checksum=checksum,
+        photo_filename=image_path.name,
         recognized_value=result.value,
         recognition_confidence=result.confidence,
         review_comment=result.diagnostic,
