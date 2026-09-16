@@ -33,6 +33,12 @@ class ConsumerCreateForm(forms.ModelForm):
 
 
 class MeterReadingForm(forms.Form):
+    meter = forms.ModelChoiceField(
+        queryset=Meter.objects.none(),
+        required=False,
+        label="Прибор учета",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
     reading_date = forms.DateField(
         widget=forms.DateInput(attrs={"class": "form-control", "type": "date"})
     )
@@ -42,6 +48,11 @@ class MeterReadingForm(forms.Form):
         decimal_places=3,
         widget=forms.NumberInput(attrs={"class": "form-control", "step": "0.001"}),
     )
+
+    def __init__(self, *args, meters=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if meters is not None:
+            self.fields["meter"].queryset = meters
 
 
 class SupplyObjectForm(forms.ModelForm):

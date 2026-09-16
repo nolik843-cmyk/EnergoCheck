@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
-from consumers.models import Consumer
+from consumers.models import Consumer, Meter, MeterReading
 from consumers.services import (
     create_consumer,
     create_contract,
     create_meter,
-    create_meter_reading,
     create_supply_object,
+    get_readings_pending_review,
+    review_meter_reading,
+    submit_manual_reading,
 )
 from employee.forms import (
     ConsumerCreateForm,
@@ -53,24 +55,56 @@ def consumer_create_view(request: HttpRequest) -> HttpResponse:
 @user_passes_test(is_employee)
 def meter_reading_create_view(request: HttpRequest, consumer_id: int) -> HttpResponse:
     consumer = Consumer.objects.get(pk=consumer_id)
+    meters = Meter.objects.filter(
+        supply_object__consumer=consumer,
+        status=Meter.Status.ACTIVE,
+    )
 
     if request.method == "POST":
-        form = MeterReadingForm(request.POST)
+        form = MeterReadingForm(request.POST, meters=meters)
         if form.is_valid():
-            create_meter_reading(
+            submit_manual_reading(
                 consumer=consumer,
                 reading_date=form.cleaned_data["reading_date"],
                 value=form.cleaned_data["value"],
+                meter=form.cleaned_data["meter"],
+                entered_by=request.user,
             )
             return redirect("consumer_detail", pk=consumer.pk)
     else:
-        form = MeterReadingForm()
+        form = MeterReadingForm(meters=meters)
 
     return render(
         request,
         "employee/meter_reading_create.html",
         {"form": form, "consumer": consumer, "title": "Добавить показание"},
     )
+
+
+@login_required
+@user_passes_test(is_employee)
+def meter_reading_review_view(request: HttpRequest) -> HttpResponse:
+    readings = get_readings_pending_review()
+    return render(
+        request,
+        "employee/meter_reading_review.html",
+        {"readings": readings, "title": "Проверка показаний"},
+    )
+
+
+@login_required
+@user_passes_test(is_employee)
+def meter_reading_review_action_view(request: HttpRequest, reading_id: int) -> HttpResponse:
+    reading = get_object_or_404(MeterReading, pk=reading_id)
+    if request.method == "POST":
+        approved = request.POST.get("action") == "approve"
+        review_meter_reading(
+            reading=reading,
+            approved=approved,
+            reviewer=request.user,
+            comment=request.POST.get("comment", ""),
+        )
+    return redirect("meter_reading_review")
 
 
 @login_required

@@ -2,10 +2,11 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 
 from .models import Consumer, Contract, Meter, MeterReading, SupplyObject
-from .services import create_consumer
+from .services import create_consumer, review_meter_reading, submit_manual_reading
 
 User = get_user_model()
 
@@ -148,3 +149,81 @@ class TestConsumerBilling:
 
         assert response.status_code == 302
         assert response["Location"] == "/accounts/login/?next=/consumers/"
+
+    def test_manual_reading_lower_than_previous_waits_for_review(self):
+        consumer = Consumer.objects.create(
+            account_number="A-3002",
+            full_name="Олег Соколов",
+            address="ул. Тихая, 2",
+            contract_number="K-3002",
+            tariff_rate=Decimal("5.00"),
+        )
+        submit_manual_reading(
+            consumer=consumer,
+            reading_date="2026-08-01",
+            value=Decimal("100.000"),
+        )
+
+        reading = submit_manual_reading(
+            consumer=consumer,
+            reading_date="2026-09-01",
+            value=Decimal("90.000"),
+        )
+
+        assert reading.status == MeterReading.Status.PENDING_REVIEW
+        assert reading.confirmed_at is None
+
+    def test_duplicate_manual_reading_is_rejected(self):
+        consumer = Consumer.objects.create(
+            account_number="A-3003",
+            full_name="Нина Белова",
+            address="ул. Тихая, 3",
+            contract_number="K-3003",
+            tariff_rate=Decimal("5.00"),
+        )
+        submit_manual_reading(
+            consumer=consumer,
+            reading_date="2026-09-01",
+            value=Decimal("100.000"),
+        )
+
+        with pytest.raises(ValidationError):
+            submit_manual_reading(
+                consumer=consumer,
+                reading_date="2026-09-01",
+                value=Decimal("100.000"),
+            )
+
+    def test_employee_can_review_manual_reading(self):
+        consumer = Consumer.objects.create(
+            account_number="A-3004",
+            full_name="Роман Крылов",
+            address="ул. Тихая, 4",
+            contract_number="K-3004",
+            tariff_rate=Decimal("5.00"),
+        )
+        submit_manual_reading(
+            consumer=consumer,
+            reading_date="2026-08-01",
+            value=Decimal("100.000"),
+        )
+        reading = submit_manual_reading(
+            consumer=consumer,
+            reading_date="2026-09-01",
+            value=Decimal("90.000"),
+        )
+        employee = User.objects.create_user(
+            username="reviewer",
+            password="StrongPass123!",
+            role=User.Role.EMPLOYEE,
+        )
+
+        response = review_meter_reading(
+            reading=reading,
+            approved=True,
+            reviewer=employee,
+            comment="Проверено сотрудником",
+        )
+
+        assert response.status == MeterReading.Status.CONFIRMED
+        assert response.review_comment == "Проверено сотрудником"

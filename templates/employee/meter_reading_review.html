@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <h1 class="h3 mb-4">Проверка показаний</h1>
+  {% for reading in readings %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <div class="d-flex justify-content-between gap-3">
+          <div>
+            <h2 class="h5 mb-1">{{ reading.consumer.full_name }}</h2>
+            <p class="text-muted mb-2">
+              {{ reading.reading_date }} · {{ reading.value }} кВт·ч
+              {% if reading.meter %} · Прибор {{ reading.meter.serial_number }}{% endif %}
+            </p>
+          </div>
+          <span class="badge text-bg-warning align-self-start">Ожидает проверки</span>
+        </div>
+        <form method="post" action="{% url 'meter_reading_review_action' reading.id %}">
+          {% csrf_token %}
+          <textarea name="comment" class="form-control mb-2" rows="2" placeholder="Комментарий"></textarea>
+          <button name="action" value="approve" class="btn btn-success">Подтвердить</button>
+          <button name="action" value="reject" class="btn btn-outline-danger">Отклонить</button>
+        </form>
+      </div>
+    </div>
+  {% empty %}
+    <div class="alert alert-success">Показаний, ожидающих проверки, нет.</div>
+  {% endfor %}
+</div>
+{% endblock %}

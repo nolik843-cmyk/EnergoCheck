@@ -3,7 +3,9 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
+from django.utils import timezone
 
 from .models import Consumer, Contract, Meter, MeterReading, SupplyObject
 
@@ -46,6 +48,67 @@ def create_meter_reading(
         reading_date=reading_date,
         value=value,
     )
+
+
+def submit_manual_reading(
+    *,
+    consumer: Consumer,
+    reading_date: date,
+    value: Decimal,
+    meter: Meter | None = None,
+    entered_by=None,
+) -> MeterReading:
+    if meter is not None and meter.supply_object.consumer_id != consumer.id:
+        raise ValidationError("Выбранный прибор учета не принадлежит потребителю.")
+
+    readings = MeterReading.objects.filter(consumer=consumer, reading_date=reading_date)
+    if meter is not None:
+        readings = readings.filter(meter=meter)
+    if readings.filter(value=value).exists():
+        raise ValidationError("Показание с такой датой и значением уже передано.")
+
+    confirmed = MeterReading.objects.filter(
+        consumer=consumer,
+        status=MeterReading.Status.CONFIRMED,
+    )
+    if meter is not None:
+        confirmed = confirmed.filter(meter=meter)
+    previous = confirmed.order_by("-reading_date", "-created_at").first()
+    status = MeterReading.Status.CONFIRMED
+    confirmed_at = timezone.now()
+    if previous is not None and value < previous.value:
+        status = MeterReading.Status.PENDING_REVIEW
+        confirmed_at = None
+
+    return MeterReading.objects.create(
+        consumer=consumer,
+        meter=meter,
+        reading_date=reading_date,
+        value=value,
+        source=(
+            MeterReading.Source.EMPLOYEE
+            if entered_by is not None and getattr(entered_by, "is_employee", False)
+            else MeterReading.Source.MANUAL
+        ),
+        status=status,
+        confirmed_at=confirmed_at,
+    )
+
+
+def get_readings_pending_review() -> QuerySet[MeterReading]:
+    return MeterReading.objects.filter(status=MeterReading.Status.PENDING_REVIEW).select_related(
+        "consumer", "meter"
+    )
+
+
+def review_meter_reading(
+    *, reading: MeterReading, approved: bool, reviewer, comment: str = ""
+) -> MeterReading:
+    reading.status = MeterReading.Status.CONFIRMED if approved else MeterReading.Status.REJECTED
+    reading.review_comment = comment
+    reading.confirmed_at = timezone.now() if approved else None
+    reading.save(update_fields=["status", "review_comment", "confirmed_at"])
+    return reading
 
 
 def create_supply_object(**kwargs) -> SupplyObject:
