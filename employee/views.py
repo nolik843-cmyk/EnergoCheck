@@ -5,8 +5,20 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
 from consumers.models import Consumer
-from consumers.services import create_consumer, create_meter_reading
-from employee.forms import ConsumerCreateForm, MeterReadingForm
+from consumers.services import (
+    create_consumer,
+    create_contract,
+    create_meter,
+    create_meter_reading,
+    create_supply_object,
+)
+from employee.forms import (
+    ConsumerCreateForm,
+    ContractForm,
+    MeterForm,
+    MeterReadingForm,
+    SupplyObjectForm,
+)
 
 
 def is_employee(user) -> bool:
@@ -58,4 +70,38 @@ def meter_reading_create_view(request: HttpRequest, consumer_id: int) -> HttpRes
         request,
         "employee/meter_reading_create.html",
         {"form": form, "consumer": consumer, "title": "Добавить показание"},
+    )
+
+
+@login_required
+@user_passes_test(is_employee)
+def supply_object_create_view(request: HttpRequest) -> HttpResponse:
+    form = SupplyObjectForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        create_supply_object(**form.cleaned_data)
+        return redirect("employee_dashboard")
+    return render(
+        request, "employee/entity_create.html", {"form": form, "title": "Новый объект потребления"}
+    )
+
+
+@login_required
+@user_passes_test(is_employee)
+def contract_create_view(request: HttpRequest) -> HttpResponse:
+    form = ContractForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        create_contract(**form.cleaned_data)
+        return redirect("employee_dashboard")
+    return render(request, "employee/entity_create.html", {"form": form, "title": "Новый договор"})
+
+
+@login_required
+@user_passes_test(is_employee)
+def meter_create_view(request: HttpRequest) -> HttpResponse:
+    form = MeterForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        create_meter(**form.cleaned_data)
+        return redirect("employee_dashboard")
+    return render(
+        request, "employee/entity_create.html", {"form": form, "title": "Новый прибор учета"}
     )

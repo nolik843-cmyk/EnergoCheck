@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from django.db.models import QuerySet
 
-from .models import Consumer, MeterReading
+from .models import Consumer, Contract, Meter, MeterReading, SupplyObject
 
 
 def get_active_consumers() -> QuerySet[Consumer]:
@@ -46,6 +46,18 @@ def create_meter_reading(
         reading_date=reading_date,
         value=value,
     )
+
+
+def create_supply_object(**kwargs) -> SupplyObject:
+    return SupplyObject.objects.create(**kwargs)
+
+
+def create_contract(**kwargs) -> Contract:
+    return Contract.objects.create(**kwargs)
+
+
+def create_meter(**kwargs) -> Meter:
+    return Meter.objects.create(**kwargs)
 
 
 def calculate_monthly_bill(consumer: Consumer, delta_kwh: Decimal) -> Decimal:

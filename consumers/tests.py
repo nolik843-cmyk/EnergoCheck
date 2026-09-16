@@ -4,7 +4,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 
-from .models import Consumer, MeterReading
+from .models import Consumer, Contract, Meter, MeterReading, SupplyObject
 from .services import create_consumer
 
 User = get_user_model()
@@ -12,6 +12,37 @@ User = get_user_model()
 
 @pytest.mark.django_db
 class TestConsumerBilling:
+    def test_supply_object_contract_and_meter_relationships(self):
+        consumer = Consumer.objects.create(
+            account_number="A-3001",
+            full_name="Ирина Орлова",
+            address="ул. Новая, 1",
+            contract_number="K-3001",
+            tariff_rate=Decimal("5.00"),
+        )
+        supply_object = SupplyObject.objects.create(
+            consumer=consumer,
+            address="ул. Новая, 1",
+            object_type="Квартира",
+            area_m2=Decimal("54.20"),
+            residents_count=2,
+        )
+        contract = Contract.objects.create(
+            consumer=consumer,
+            supply_object=supply_object,
+            number="DOG-3001",
+            start_date="2026-01-01",
+        )
+        meter = Meter.objects.create(
+            supply_object=supply_object,
+            serial_number="M-3001",
+            install_date="2026-01-01",
+        )
+
+        assert contract.supply_object == supply_object
+        assert meter.supply_object == supply_object
+        assert list(consumer.supply_objects.all()) == [supply_object]
+
     def test_consumer_creation(self):
         consumer = Consumer.objects.create(
             account_number="A-1001",
