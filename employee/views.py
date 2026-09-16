@@ -11,6 +11,7 @@ from consumers.services import (
     create_meter,
     create_supply_object,
     get_readings_pending_review,
+    recognize_photo_reading,
     review_meter_reading,
     submit_manual_reading,
 )
@@ -19,8 +20,10 @@ from employee.forms import (
     ContractForm,
     MeterForm,
     MeterReadingForm,
+    PhotoReadingForm,
     SupplyObjectForm,
 )
+from integrations.meter_ocr.fake import FakeMeterReadingRecognizer
 
 
 def is_employee(user) -> bool:
@@ -105,6 +108,29 @@ def meter_reading_review_action_view(request: HttpRequest, reading_id: int) -> H
             comment=request.POST.get("comment", ""),
         )
     return redirect("meter_reading_review")
+
+
+@login_required
+@user_passes_test(is_employee)
+def photo_reading_create_view(request: HttpRequest, consumer_id: int) -> HttpResponse:
+    consumer = get_object_or_404(Consumer, pk=consumer_id)
+    meters = Meter.objects.filter(supply_object__consumer=consumer, status=Meter.Status.ACTIVE)
+    form = PhotoReadingForm(request.POST or None, request.FILES or None, meters=meters)
+    result = None
+    if request.method == "POST" and form.is_valid():
+        result = recognize_photo_reading(
+            consumer=consumer,
+            meter=form.cleaned_data["meter"],
+            reading_date=form.cleaned_data["reading_date"],
+            photo=form.cleaned_data["photo"],
+            recognizer=FakeMeterReadingRecognizer(None),
+            entered_by=request.user,
+        )
+    return render(
+        request,
+        "employee/photo_reading_create.html",
+        {"form": form, "consumer": consumer, "result": result, "title": "Распознавание показания"},
+    )
 
 
 @login_required

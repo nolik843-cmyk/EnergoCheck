@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
+from pathlib import Path
 
 from django.core.exceptions import ValidationError
 from django.db.models import QuerySet
 from django.utils import timezone
+from PIL import Image, UnidentifiedImageError
+
+from integrations.meter_ocr import MeterReadingRecognizer
 
 from .models import Consumer, Contract, Meter, MeterReading, SupplyObject
 
@@ -108,6 +112,54 @@ def review_meter_reading(
     reading.review_comment = comment
     reading.confirmed_at = timezone.now() if approved else None
     reading.save(update_fields=["status", "review_comment", "confirmed_at"])
+    return reading
+
+
+def recognize_photo_reading(
+    *,
+    consumer: Consumer,
+    meter: Meter,
+    reading_date: date,
+    photo,
+    recognizer: MeterReadingRecognizer,
+    entered_by=None,
+    confidence_threshold: Decimal = Decimal("0.75"),
+) -> MeterReading:
+    if meter.supply_object.consumer_id != consumer.id:
+        raise ValidationError("Выбранный прибор учета не принадлежит потребителю.")
+
+    try:
+        image = Image.open(photo)
+        image.verify()
+    except (UnidentifiedImageError, OSError) as exc:
+        raise ValidationError("Файл не является корректным изображением.") from exc
+
+    photo.seek(0)
+    temporary_path = Path(getattr(photo, "temporary_file_path", lambda: "")())
+    result = (
+        recognizer.recognize(temporary_path)
+        if temporary_path
+        else recognizer.recognize(Path(photo.name))
+    )
+    value = result.value or Decimal("0.000")
+    status = (
+        MeterReading.Status.CONFIRMED
+        if result.value is not None and result.confidence >= confidence_threshold
+        else MeterReading.Status.PENDING_REVIEW
+    )
+    reading = MeterReading.objects.create(
+        consumer=consumer,
+        meter=meter,
+        reading_date=reading_date,
+        value=value,
+        source=MeterReading.Source.PHOTO,
+        status=status,
+        photo=photo,
+        recognized_value=result.value,
+        recognition_confidence=result.confidence,
+        review_comment=result.diagnostic,
+        confirmed_at=timezone.now() if status == MeterReading.Status.CONFIRMED else None,
+    )
     return reading
 
 

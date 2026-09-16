@@ -1,12 +1,22 @@
 from decimal import Decimal
+from io import BytesIO
 
 import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from PIL import Image
+
+from integrations.meter_ocr.fake import FakeMeterReadingRecognizer
 
 from .models import Consumer, Contract, Meter, MeterReading, SupplyObject
-from .services import create_consumer, review_meter_reading, submit_manual_reading
+from .services import (
+    create_consumer,
+    recognize_photo_reading,
+    review_meter_reading,
+    submit_manual_reading,
+)
 
 User = get_user_model()
 
@@ -227,3 +237,37 @@ class TestConsumerBilling:
 
         assert response.status == MeterReading.Status.CONFIRMED
         assert response.review_comment == "Проверено сотрудником"
+
+    def test_photo_reading_uses_fake_recognizer_and_stores_result(self):
+        consumer = Consumer.objects.create(
+            account_number="A-3005",
+            full_name="Дарья Лебедева",
+            address="ул. Тихая, 5",
+            contract_number="K-3005",
+            tariff_rate=Decimal("5.00"),
+        )
+        supply_object = SupplyObject.objects.create(consumer=consumer, address=consumer.address)
+        meter = Meter.objects.create(
+            supply_object=supply_object,
+            serial_number="M-3005",
+            install_date="2026-01-01",
+        )
+        image_buffer = BytesIO()
+        Image.new("RGB", (20, 20), color="white").save(image_buffer, format="JPEG")
+        photo = SimpleUploadedFile(
+            "meter.jpg",
+            image_buffer.getvalue(),
+            content_type="image/jpeg",
+        )
+
+        reading = recognize_photo_reading(
+            consumer=consumer,
+            meter=meter,
+            reading_date="2026-09-16",
+            photo=photo,
+            recognizer=FakeMeterReadingRecognizer(Decimal("123.450")),
+        )
+
+        assert reading.source == MeterReading.Source.PHOTO
+        assert reading.recognized_value == Decimal("123.450")
+        assert reading.status == MeterReading.Status.CONFIRMED

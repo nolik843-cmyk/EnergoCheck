@@ -7,6 +7,7 @@ from .views import (
     meter_reading_create_view,
     meter_reading_review_action_view,
     meter_reading_review_view,
+    photo_reading_create_view,
     supply_object_create_view,
 )
 
@@ -16,6 +17,11 @@ urlpatterns = [
     path("contracts/create/", contract_create_view, name="contract_create"),
     path("meters/create/", meter_create_view, name="meter_create"),
     path("readings/review/", meter_reading_review_view, name="meter_reading_review"),
+    path(
+        "consumers/<int:consumer_id>/reading/photo/",
+        photo_reading_create_view,
+        name="photo_reading_create",
+    ),
     path(
         "readings/<int:reading_id>/review/",
         meter_reading_review_action_view,

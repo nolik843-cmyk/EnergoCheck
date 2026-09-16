@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h1 class="h3 mb-2">Распознавание показания</h1>
+          <p class="text-muted">Потребитель: {{ consumer.full_name }}</p>
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-primary">Распознать</button>
+            <a href="{% url 'consumer_detail' consumer.pk %}" class="btn btn-outline-secondary">Назад</a>
+          </form>
+          {% if result %}
+            <div class="alert {% if result.status == 'CONFIRMED' %}alert-success{% else %}alert-warning{% endif %} mt-4">
+              <strong>Результат:</strong> {{ result.recognized_value|default:"Не распознано" }} кВт·ч
+              <br />Уверенность: {{ result.recognition_confidence }}
+              {% if result.status == 'PENDING_REVIEW' %}
+                <br />Показание отправлено сотруднику на проверку.
+              {% endif %}
+            </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

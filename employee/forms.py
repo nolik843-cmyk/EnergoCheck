@@ -55,6 +55,27 @@ class MeterReadingForm(forms.Form):
             self.fields["meter"].queryset = meters
 
 
+class PhotoReadingForm(forms.Form):
+    meter = forms.ModelChoiceField(
+        queryset=Meter.objects.none(),
+        label="Прибор учета",
+        widget=forms.Select(attrs={"class": "form-select"}),
+    )
+    reading_date = forms.DateField(
+        label="Дата показания",
+        widget=forms.DateInput(attrs={"class": "form-control", "type": "date"}),
+    )
+    photo = forms.ImageField(
+        label="Фотография счетчика",
+        widget=forms.ClearableFileInput(attrs={"class": "form-control", "accept": "image/*"}),
+    )
+
+    def __init__(self, *args, meters=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if meters is not None:
+            self.fields["meter"].queryset = meters
+
+
 class SupplyObjectForm(forms.ModelForm):
     class Meta:
         model = SupplyObject
