@@ -1,0 +1,18 @@
+[project]
+name = "energocheck"
+version = "0.1.0"
+description = "EnergoCheck web application"
+requires-python = ">=3.13"
+
+dependencies = []
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.dev"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
