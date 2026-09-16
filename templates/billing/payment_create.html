@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-6">
+      <div class="card shadow-sm border-0">
+        <div class="card-body">
+          <h1 class="h3 mb-3">Оплата счёта</h1>
+          <p class="text-muted mb-4">Счёт №{{ invoice.id }} · {{ invoice.consumer.full_name }} · Сумма: {{ invoice.total_amount }} ₽</p>
+          <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-success">Подтвердить оплату</button>
+            <a href="/billing/" class="btn btn-outline-secondary">Назад</a>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
