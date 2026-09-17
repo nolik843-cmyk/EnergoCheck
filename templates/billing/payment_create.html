@@ -9,11 +9,12 @@
       <div class="card shadow-sm border-0">
         <div class="card-body">
           <h1 class="h3 mb-3">Оплата счёта</h1>
+          <div class="alert alert-warning">Учебная имитация оплаты. Реальные банковские операции не выполняются.</div>
           <p class="text-muted mb-4">Счёт №{{ invoice.id }} · {{ invoice.consumer.full_name }} · Сумма: {{ invoice.total_amount }} ₽</p>
           <form method="post">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit" class="btn btn-success">Подтвердить оплату</button>
+            <button type="submit" class="btn btn-success">Оплатить (демо)</button>
             <a href="/billing/" class="btn btn-outline-secondary">Назад</a>
           </form>
         </div>

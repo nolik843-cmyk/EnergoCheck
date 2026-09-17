@@ -35,11 +35,9 @@ class InvoiceCreateForm(forms.ModelForm):
 class PaymentCreateForm(forms.ModelForm):
     class Meta:
         model = Payment
-        fields = ["amount", "payment_method", "reference"]
+        fields = ["amount"]
         widgets = {
             "amount": forms.NumberInput(attrs={"class": "form-control", "step": "0.01"}),
-            "payment_method": forms.Select(attrs={"class": "form-select"}),
-            "reference": forms.TextInput(attrs={"class": "form-control"}),
         }
 
     def clean_amount(self):

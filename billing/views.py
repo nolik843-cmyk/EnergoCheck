@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.core.exceptions import ValidationError
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
 from .forms import InvoiceCreateForm, PaymentCreateForm, TariffForm
 from .models import Invoice
-from .services import create_invoice_for_consumer, register_payment
+from .services import create_invoice_for_consumer, register_demo_payment
 
 
 def is_employee(user) -> bool:
     return user.is_authenticated and user.is_employee
+
+
+def can_pay_invoice(user, invoice: Invoice) -> bool:
+    return user.is_employee or invoice.consumer.user_id == user.id
 
 
 @login_required
@@ -42,27 +47,38 @@ def invoice_create_view(request: HttpRequest) -> HttpResponse:
 
 
 @login_required
-@user_passes_test(is_employee)
 def payment_create_view(request: HttpRequest, invoice_id: int) -> HttpResponse:
     invoice = Invoice.objects.get(pk=invoice_id)
+    if not can_pay_invoice(request.user, invoice):
+        return redirect("consumer_dashboard")
 
     if request.method == "POST":
         form = PaymentCreateForm(request.POST)
         if form.is_valid():
-            register_payment(
-                invoice=invoice,
-                amount=form.cleaned_data["amount"],
-                method=form.cleaned_data["payment_method"],
-                reference=form.cleaned_data["reference"],
-            )
-            return redirect("billing_dashboard")
+            try:
+                register_demo_payment(
+                    invoice_id=invoice.pk,
+                    amount=form.cleaned_data["amount"],
+                    user=request.user,
+                )
+            except ValidationError as error:
+                form.add_error("amount", error.message)
+            else:
+                return redirect(
+                    "consumer_dashboard" if request.user.is_consumer else "billing_dashboard"
+                )
     else:
         form = PaymentCreateForm(initial={"amount": invoice.total_amount})
 
     return render(
         request,
         "billing/payment_create.html",
-        {"form": form, "invoice": invoice, "title": "Оплата счёта"},
+        {
+            "form": form,
+            "invoice": invoice,
+            "title": "Оплата счёта",
+            "demo_payment": True,
+        },
     )
 
 

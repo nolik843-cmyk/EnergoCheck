@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
+from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
@@ -106,4 +107,40 @@ def register_payment(invoice: Invoice, amount: Decimal, method: str, reference: 
         invoice.status = Invoice.Status.PARTIALLY_PAID
         invoice.save(update_fields=["status"])
 
+    return payment
+
+
+@transaction.atomic
+def register_demo_payment(*, invoice_id: int, amount: Decimal, user) -> Payment:
+    locked_invoice = Invoice.objects.select_for_update().get(pk=invoice_id)
+    paid_amount = sum(
+        payment.amount for payment in locked_invoice.payments.filter(status=Payment.Status.SUCCESS)
+    )
+    remaining = (locked_invoice.total_amount - paid_amount).quantize(Decimal("0.01"))
+    if remaining <= Decimal("0.00") or locked_invoice.status == Invoice.Status.PAID:
+        raise ValidationError("Счет уже оплачен.")
+    if amount <= Decimal("0.00"):
+        raise ValidationError("Сумма оплаты должна быть больше нуля.")
+    if amount > remaining:
+        raise ValidationError("Сумма оплаты не может превышать остаток задолженности.")
+
+    reference = f"DEMO-{locked_invoice.pk}-{timezone.now().strftime('%Y%m%d%H%M%S%f')}"
+    payment = Payment.objects.create(
+        invoice=locked_invoice,
+        amount=amount,
+        status=Payment.Status.SUCCESS,
+        payment_method=Payment.Method.DEMO,
+        reference=reference,
+        demo_reference=reference,
+        created_by=user,
+    )
+    new_total = paid_amount + amount
+    locked_invoice.status = (
+        Invoice.Status.PAID
+        if new_total >= locked_invoice.total_amount
+        else Invoice.Status.PARTIALLY_PAID
+    )
+    if locked_invoice.status == Invoice.Status.PAID:
+        locked_invoice.paid_at = timezone.now()
+    locked_invoice.save(update_fields=["status", "paid_at"])
     return payment

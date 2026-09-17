@@ -3,12 +3,18 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.urls import reverse
 
 from consumers.models import Consumer, Contract, Meter, MeterReading, SupplyObject
 
 from .models import Invoice, Payment, Tariff
-from .services import create_invoice_for_consumer, generate_invoice, register_payment
+from .services import (
+    create_invoice_for_consumer,
+    generate_invoice,
+    register_demo_payment,
+    register_payment,
+)
 
 User = get_user_model()
 
@@ -115,14 +121,78 @@ class TestBilling:
             reverse("payment_create", kwargs={"invoice_id": invoice.pk}),
             {
                 "amount": str(invoice.total_amount),
-                "payment_method": Payment.Method.CARD,
-                "reference": "REF-3001",
             },
         )
 
         invoice.refresh_from_db()
         assert response.status_code == 302
         assert invoice.status == Invoice.Status.PAID
+
+    def test_demo_payment_rejects_amount_above_remaining(self):
+        consumer = Consumer.objects.create(
+            account_number="A-2012",
+            full_name="Надежда Федорова",
+            address="ул. Полевая, 12",
+            contract_number="K-2012",
+            tariff_rate=Decimal("5.00"),
+        )
+        invoice = create_invoice_for_consumer(
+            consumer=consumer,
+            billing_period="2026-12",
+            previous_reading=Decimal("10.000"),
+            current_reading=Decimal("20.000"),
+            due_date="2026-12-25",
+        )
+        user = User.objects.create_user(
+            username="consumer_payment",
+            password="StrongPass123!",
+            role=User.Role.CONSUMER,
+        )
+        consumer.user = user
+        consumer.save(update_fields=["user"])
+
+        with pytest.raises(ValidationError, match="не может превышать"):
+            register_demo_payment(
+                invoice_id=invoice.pk,
+                amount=invoice.total_amount + Decimal("0.01"),
+                user=user,
+            )
+
+    def test_demo_payment_creates_only_one_successful_full_payment(self):
+        consumer = Consumer.objects.create(
+            account_number="A-2013",
+            full_name="Лидия Назарова",
+            address="ул. Полевая, 13",
+            contract_number="K-2013",
+            tariff_rate=Decimal("5.00"),
+        )
+        invoice = create_invoice_for_consumer(
+            consumer=consumer,
+            billing_period="2027-01",
+            previous_reading=Decimal("10.000"),
+            current_reading=Decimal("20.000"),
+            due_date="2027-01-25",
+        )
+        user = User.objects.create_user(
+            username="consumer_payment_full",
+            password="StrongPass123!",
+            role=User.Role.CONSUMER,
+        )
+        consumer.user = user
+        consumer.save(update_fields=["user"])
+
+        payment = register_demo_payment(
+            invoice_id=invoice.pk,
+            amount=invoice.total_amount,
+            user=user,
+        )
+
+        invoice.refresh_from_db()
+        assert payment.payment_method == Payment.Method.DEMO
+        assert payment.status == Payment.Status.SUCCESS
+        assert invoice.status == Invoice.Status.PAID
+        with pytest.raises(ValidationError, match="уже оплачен"):
+            register_demo_payment(invoice_id=invoice.pk, amount=Decimal("1.00"), user=user)
 
     def test_generate_invoice_uses_tariff_snapshot_and_is_idempotent(self):
         consumer = Consumer.objects.create(

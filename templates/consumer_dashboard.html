@@ -25,6 +25,9 @@
               <strong>{{ invoice.billing_period }}</strong>
               <span class="float-end">{{ invoice.total_amount }} ₽</span>
               <div class="small text-muted">{{ invoice.get_status_display }}</div>
+              {% if invoice.status != 'PAID' %}
+                <a href="{% url 'payment_create' invoice.pk %}" class="btn btn-sm btn-success mt-2">Оплатить (демо)</a>
+              {% endif %}
             </div>
           {% empty %}
             <p class="text-muted mb-0">Счетов пока нет.</p>
