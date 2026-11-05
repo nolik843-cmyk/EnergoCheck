@@ -12,6 +12,11 @@
     <a href="/" class="btn btn-outline-secondary">На главную</a>
   </div>
 
+  <form method="get" class="row g-2 mb-4">
+    <div class="col-md-8"><input class="form-control" type="search" name="q" value="{{ search }}" placeholder="ФИО, лицевой счёт или адрес"></div>
+    <div class="col-auto"><button class="btn btn-primary" type="submit">Найти</button></div>
+    <div class="col-auto"><a class="btn btn-outline-secondary" href="{% url 'consumer_list' %}">Сбросить</a></div>
+  </form>
   {% if consumers %}
     <div class="table-responsive">
       <table class="table table-striped align-middle shadow-sm rounded overflow-hidden">
