@@ -111,6 +111,10 @@ class ContractForm(forms.ModelForm):
             raise forms.ValidationError(
                 "Объект потребления должен принадлежать выбранному потребителю."
             )
+        start_date = cleaned_data.get("start_date")
+        end_date = cleaned_data.get("end_date")
+        if start_date and end_date and end_date < start_date:
+            raise forms.ValidationError("Дата окончания договора не может быть раньше начала.")
         return cleaned_data
 
 
@@ -141,3 +145,9 @@ class MeterForm(forms.ModelForm):
             "phase_count": forms.NumberInput(attrs={"class": "form-control", "min": 1}),
             "status": forms.Select(attrs={"class": "form-select"}),
         }
+
+    def clean_multiplier(self):
+        value = self.cleaned_data["multiplier"]
+        if value <= 0:
+            raise forms.ValidationError("Коэффициент прибора должен быть больше нуля.")
+        return value
