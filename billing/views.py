@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.core.exceptions import ValidationError
 from django.http import HttpRequest, HttpResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 
 from .forms import InvoiceCreateForm, PaymentCreateForm, TariffForm
 from .models import Invoice
@@ -48,7 +48,7 @@ def invoice_create_view(request: HttpRequest) -> HttpResponse:
 
 @login_required
 def payment_create_view(request: HttpRequest, invoice_id: int) -> HttpResponse:
-    invoice = Invoice.objects.get(pk=invoice_id)
+    invoice = get_object_or_404(Invoice, pk=invoice_id)
     if not can_pay_invoice(request.user, invoice):
         return redirect("consumer_dashboard")
 
