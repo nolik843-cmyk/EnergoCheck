@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, render
+from django.db.models import Q
 
 from .models import Consumer
 from .services import get_active_consumers
@@ -16,7 +17,14 @@ def is_employee(user) -> bool:
 @user_passes_test(is_employee)
 def consumer_list(request: HttpRequest) -> HttpResponse:
     consumers = get_active_consumers()
-    return render(request, "consumers/list.html", {"consumers": consumers, "title": "Потребители"})
+    search = request.GET.get("q", "").strip()
+    if search:
+        consumers = consumers.filter(
+            Q(account_number__icontains=search)
+            | Q(full_name__icontains=search)
+            | Q(address__icontains=search)
+        )
+    return render(request, "consumers/list.html", {"consumers": consumers, "search": search, "title": "Потребители"})
 
 
 @login_required
