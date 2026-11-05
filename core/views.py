@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db.models import Sum
-from django.http import HttpRequest, HttpResponse
+from django.http import Http404, HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 
 from billing.models import Invoice, Payment
@@ -58,7 +58,10 @@ def employee_dashboard(request: HttpRequest) -> HttpResponse:
 @login_required
 @user_passes_test(lambda user: user.is_consumer)
 def consumer_dashboard(request: HttpRequest) -> HttpResponse:
-    consumer = request.user.consumer_profile
+    try:
+        consumer = request.user.consumer_profile
+    except Consumer.DoesNotExist as exc:
+        raise Http404("Для этой учётной записи не найден лицевой счёт.") from exc
     invoices = consumer.invoices.select_related("contract").order_by("-issued_at")[:5]
     readings = consumer.meter_readings.select_related("meter").order_by("-reading_date")[:5]
     notifications = request.user.notifications.order_by("-created_at")[:5]
