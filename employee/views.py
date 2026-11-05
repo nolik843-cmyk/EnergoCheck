@@ -176,3 +176,49 @@ def meter_create_view(request: HttpRequest) -> HttpResponse:
     return render(
         request, "employee/entity_create.html", {"form": form, "title": "Новый прибор учета"}
     )
+
+
+@login_required
+@user_passes_test(is_employee)
+def consumer_edit_view(request: HttpRequest, pk: int) -> HttpResponse:
+    consumer = get_object_or_404(Consumer, pk=pk)
+    form = ConsumerCreateForm(request.POST or None, instance=consumer)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return redirect("consumer_detail", pk=consumer.pk)
+    return render(request, "employee/entity_create.html", {"form": form, "title": "Изменить потребителя"})
+
+
+@login_required
+@user_passes_test(is_employee)
+def supply_object_edit_view(request: HttpRequest, pk: int) -> HttpResponse:
+    from consumers.models import SupplyObject
+    obj = get_object_or_404(SupplyObject, pk=pk)
+    form = SupplyObjectForm(request.POST or None, instance=obj)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return redirect("consumer_detail", pk=obj.consumer_id)
+    return render(request, "employee/entity_create.html", {"form": form, "title": "Изменить объект"})
+
+
+@login_required
+@user_passes_test(is_employee)
+def contract_edit_view(request: HttpRequest, pk: int) -> HttpResponse:
+    from consumers.models import Contract
+    contract = get_object_or_404(Contract, pk=pk)
+    form = ContractForm(request.POST or None, instance=contract)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return redirect("consumer_detail", pk=contract.consumer_id)
+    return render(request, "employee/entity_create.html", {"form": form, "title": "Изменить договор"})
+
+
+@login_required
+@user_passes_test(is_employee)
+def meter_edit_view(request: HttpRequest, pk: int) -> HttpResponse:
+    meter = get_object_or_404(Meter, pk=pk)
+    form = MeterForm(request.POST or None, instance=meter)
+    if request.method == "POST" and form.is_valid():
+        form.save()
+        return redirect("consumer_detail", pk=meter.supply_object.consumer_id)
+    return render(request, "employee/entity_create.html", {"form": form, "title": "Изменить прибор"})
