@@ -3,6 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator
 from django.db import models
 
@@ -86,6 +87,14 @@ class Contract(models.Model):
         verbose_name = "Договор"
         verbose_name_plural = "Договоры"
 
+    def clean(self):
+        super().clean()
+        if self.supply_object_id and self.consumer_id:
+            if self.supply_object.consumer_id != self.consumer_id:
+                raise ValidationError({"supply_object": "Объект принадлежит другому потребителю."})
+        if self.end_date and self.start_date and self.end_date < self.start_date:
+            raise ValidationError({"end_date": "Дата завершения раньше даты начала договора."})
+
     def __str__(self) -> str:
         return self.number
 
@@ -122,6 +131,16 @@ class Meter(models.Model):
         ordering = ["serial_number"]
         verbose_name = "Прибор учета"
         verbose_name_plural = "Приборы учета"
+
+    def clean(self):
+        super().clean()
+        if self.multiplier is not None and self.multiplier <= 0:
+            raise ValidationError({"multiplier": "Коэффициент прибора должен быть больше нуля."})
+        if self.replaced_by_id and self.replaced_by_id == self.pk:
+            raise ValidationError({"replaced_by": "Прибор нельзя заменить самим собой."})
+        if self.replaced_by_id and self.supply_object_id:
+            if self.replaced_by.supply_object_id != self.supply_object_id:
+                raise ValidationError({"replaced_by": "Новый прибор должен относиться к тому же объекту."})
 
     def __str__(self) -> str:
         return self.serial_number

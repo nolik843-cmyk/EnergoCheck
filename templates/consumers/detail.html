@@ -9,9 +9,14 @@
       <h1 class="h3 mb-1">{{ consumer.full_name }}</h1>
       <p class="text-muted mb-0">Лицевой счёт: {{ consumer.account_number }}</p>
     </div>
-    <a href="/consumers/" class="btn btn-outline-secondary">К списку</a>
+    <div class="d-flex gap-2"><a href="{% url 'consumer_edit' consumer.pk %}" class="btn btn-primary">Изменить</a><a href="/consumers/" class="btn btn-outline-secondary">К списку</a></div>
   </div>
 
+  <div class="row g-3 mb-4">
+    <div class="col-md-6"><div class="card"><div class="card-body"><h2 class="h6">Объекты потребления</h2>{% for obj in consumer.supply_objects.all %}<p class="mb-1">{{ obj.address }} — <a href="{% url 'supply_object_edit' obj.pk %}">Изменить</a></p>{% empty %}<p class="text-muted">Нет объектов</p>{% endfor %}</div></div></div>
+    <div class="col-md-6"><div class="card"><div class="card-body"><h2 class="h6">Договоры</h2>{% for contract in consumer.contracts.all %}<p class="mb-1">{{ contract.number }} — <a href="{% url 'contract_edit' contract.pk %}">Изменить</a></p>{% empty %}<p class="text-muted">Нет договоров</p>{% endfor %}</div></div></div>
+    <div class="col-12"><div class="card"><div class="card-body"><h2 class="h6">Приборы учёта</h2>{% for obj in consumer.supply_objects.all %}{% for meter in obj.meters.all %}<p class="mb-1">{{ meter.serial_number }} — {{ meter.get_status_display }} — <a href="{% url 'meter_edit' meter.pk %}">Изменить</a></p>{% endfor %}{% endfor %}</div></div></div>
+  </div>
   <div class="row g-4 mb-4">
     <div class="col-md-6">
       <div class="card shadow-sm border-0 h-100">
